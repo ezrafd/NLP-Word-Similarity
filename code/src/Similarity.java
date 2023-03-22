@@ -1,3 +1,5 @@
+import java.io.*;
+
 public class Similarity {
 
     /**
@@ -15,7 +17,14 @@ public class Similarity {
      *                      – EUCLIDEAN: Euclidean distance, normalized by the L2 (Euclidean) length of the vectors.
      *                      – COSINE: Cosine distance, normalized by the L2 (Euclidean) length of the vectors.
      */
-    public Similarity (String stoplist, String sentences, String inputfile) {
-        
+    public Similarity (String stoplist, String sentences, String inputfile) throws IOException {
+        File file = new File(sentences);
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String st = br.readLine();
+        while (st != null){
+            String stLower = st.toLowerCase();
+        }
+
+
     }
 }
