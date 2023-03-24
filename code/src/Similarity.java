@@ -58,7 +58,6 @@ public class Similarity {
             String[] words = stLower.split("\\s+");
             if (!termFrequencies.containsKey(words[0])) {
                 termFrequencies.put(words[0], new HashMap<>());
-                sentenceFrequencies.put(words[0], 0.0);
             }
 
             st = br.readLine();
@@ -67,10 +66,10 @@ public class Similarity {
         file = new File(sentences);
         br = new BufferedReader(new FileReader(file));
         st = br.readLine();
-        ArrayList<String> targetWords;
+        ArrayList<String> currentWords;
 
         while (st != null){
-            targetWords = new ArrayList<>();
+            currentWords = new ArrayList<>();
             String stLower = st.toLowerCase();
 
             String[] words = stLower.split("\\s+");
@@ -82,6 +81,11 @@ public class Similarity {
                 if (stopList.contains(word)) {
                     continue;
                 }
+
+                if (!sentenceFrequencies.containsKey(word)) {
+                    sentenceFrequencies.put(word, 0.0);
+                }
+                currentWords.add(word);
 
                 if (termFrequencies.containsKey(word)) {
                     for (String w : words) {
@@ -99,7 +103,7 @@ public class Similarity {
                             termFrequencies.get(word).put(w, termFrequencies.get(word).get(w) + 1);
                         }
 
-                        targetWords.add(word);
+
                     }
                 }
 
@@ -114,27 +118,22 @@ public class Similarity {
 
             numSentences++;
 
-            for (String targetWord : targetWords) {
-                sentenceFrequencies.put(targetWord, sentenceFrequencies.get(targetWord) + 1.0);
+            for (String currentWord : currentWords) {
+                sentenceFrequencies.put(currentWord, sentenceFrequencies.get(currentWord) + 1.0);
             }
 
             st = br.readLine();
         }
 
-        System.out.println(uniqueList);
-
         idfVector = new ArrayList<>(uniqueList.size());
         for (int i = 0; i < uniqueList.size() - 1; i++) {
-            System.out.println(i);
-            System.out.println(uniqueList.get(i));
-            System.out.println(sentenceFrequencies.get(uniqueList.get(i)));
             Double logCalc = Math.log(numSentences/sentenceFrequencies.get(uniqueList.get(i)));
             idfVector.add(i, logCalc);
         }
 
         System.out.println(idfVector);
-        System.out.println(termFrequencies);
-        System.out.println(sentenceFrequencies);
+        //System.out.println(termFrequencies);
+        //System.out.println(sentenceFrequencies);
 
         System.out.println(uniqueSet.size());
         System.out.println(wordCount);
@@ -158,8 +157,16 @@ public class Similarity {
         uniqueList.indexOf(word);
 
         if (weighting.equals("IDF")) {
+            ArrayList<Double> TFIDF = new ArrayList<>(uniqueList.size());
 
+            for (int j = 0; j < uniqueList.size()-1; j++) {
+                TFIDF.add(j, occVec.get(j) * idfVector.get(j));
+            }
+
+            System.out.println(TFIDF);
         }
+
+
     }
 
     public static void main(String[] args) throws IOException {
