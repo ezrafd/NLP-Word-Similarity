@@ -1,4 +1,5 @@
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,7 +128,7 @@ public class Similarity {
         }
 
         idfVector = new ArrayList<>(uniqueList.size());
-        for (int i = 0; i < uniqueList.size() - 1; i++) {
+        for (int i = 0; i < uniqueList.size(); i++) {
             Double logCalc = Math.log(numSentences/sentenceFrequencies.get(uniqueList.get(i)));
             idfVector.add(i, logCalc);
         }
@@ -135,7 +136,7 @@ public class Similarity {
 //        if (weighting.equals("IDF")) {
 //            ArrayList<Double> TFIDF = new ArrayList<>(uniqueList.size());
 //
-//            for (int j = 0; j < uniqueList.size()-1; j++) {
+//            for (int j = 0; j < uniqueList.size(); j++) {
 //                TFIDF.add(j, occVec.get(j) * idfVector.get(j));
 //            }
 //
@@ -158,11 +159,33 @@ public class Similarity {
         }
 
         if (simMeasure.equals("L1")) {
-
+            //get L1 and normalize by dividing resulting vector by L2 length
         }
     }
 
-    public Double euclideanLength(ArrayList<Double> vector1, ArrayList<Double> vector2) {
+    public double getL2Length(ArrayList<Double> vec) {
+        double sumOfSquares = 0.0;
+        for (Double d : vec) {
+            sumOfSquares += d * d;
+        }
+        return Math.sqrt(sumOfSquares);
+    }
+
+    public double getL1Distance(ArrayList<Double> vector1, ArrayList<Double> vector2) {
+        if (vector1.size() != vector2.size()) {
+            throw new IllegalArgumentException("Vectors must be of equal size");
+        }
+
+        double sum = 0;
+        for (int i = 0; i < vector1.size(); i++) {
+            double diff = vector1.get(i) - vector2.get(i);
+            sum += Math.abs(diff);
+        }
+
+        return sum;
+    }
+
+    public double getEuclideanDistance(ArrayList<Double> vector1, ArrayList<Double> vector2) {
         if (vector1.size() != vector2.size()) {
             throw new IllegalArgumentException("Vectors must be of equal size");
         }
@@ -174,6 +197,24 @@ public class Similarity {
         }
 
         return Math.sqrt(sum);
+    }
+
+    public double getCosineDistance(ArrayList<Double> vector1, ArrayList<Double> vector2) {
+        if (vector1.size() != vector2.size()) {
+            throw new IllegalArgumentException("Vectors must be of the same length.");
+        }
+        double dotProduct = 0.0;
+        double norm1 = 0.0;
+        double norm2 = 0.0;
+        for (int i = 0; i < vector1.size(); i++) {
+            dotProduct += vector1.get(i) * vector2.get(i);
+            norm1 += vector1.get(i) * vector1.get(i);
+            norm2 += vector2.get(i) * vector2.get(i);
+        }
+        if (norm1 == 0.0 || norm2 == 0.0) {
+            throw new IllegalArgumentException("One or both vectors are zero vectors.");
+        }
+        return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
 
     public boolean isAlpha(String word) {
