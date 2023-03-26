@@ -8,6 +8,7 @@ public class Similarity {
     protected HashMap<String, Double> sentenceFrequencies;
     protected HashSet<String> stopList; // hashset containing words in the stopList
     protected HashSet<String> uniqueSet; // hashset containing all unique words in sentences file
+    protected HashMap<String, ArrayList<Double>> occVecMap; // hashmap storing all the occurrence
     protected ArrayList<String> uniqueList;
     protected ArrayList<Double> idfVector;
     protected Double numSentences; // number of sentences in the sentences file
@@ -131,6 +132,16 @@ public class Similarity {
             idfVector.add(i, logCalc);
         }
 
+//        if (weighting.equals("IDF")) {
+//            ArrayList<Double> TFIDF = new ArrayList<>(uniqueList.size());
+//
+//            for (int j = 0; j < uniqueList.size()-1; j++) {
+//                TFIDF.add(j, occVec.get(j) * idfVector.get(j));
+//            }
+//
+//            System.out.println(TFIDF);
+//        }
+
         System.out.println(idfVector);
         //System.out.println(termFrequencies);
         //System.out.println(sentenceFrequencies);
@@ -141,11 +152,35 @@ public class Similarity {
 
     }
 
+    public void runStats(String weighting, String simMeasure) {
+        for (String word : uniqueList) {
+            occVecMap.put(word, getOccVec(word));
+        }
+
+        if (simMeasure.equals("L1")) {
+
+        }
+    }
+
+    public Double euclideanLength(ArrayList<Double> vector1, ArrayList<Double> vector2) {
+        if (vector1.size() != vector2.size()) {
+            throw new IllegalArgumentException("Vectors must be of equal size");
+        }
+
+        double sum = 0;
+        for (int i = 0; i < vector1.size(); i++) {
+            double diff = vector1.get(i) - vector2.get(i);
+            sum += diff * diff;
+        }
+
+        return Math.sqrt(sum);
+    }
+
     public boolean isAlpha(String word) {
         return word.matches("[a-zA-Z]+");
     }
 
-    public void runStats(String word, String weighting, String simMeasure) {
+    public ArrayList<Double> getOccVec(String word) {
         ArrayList<Double> occVec = new ArrayList<>(uniqueList.size());
 
         for (String w : termFrequencies.get(word).keySet()) {
@@ -154,19 +189,9 @@ public class Similarity {
 
             occVec.add(index, wCount);
         }
-        uniqueList.indexOf(word);
+        //uniqueList.indexOf(word);
 
-        if (weighting.equals("IDF")) {
-            ArrayList<Double> TFIDF = new ArrayList<>(uniqueList.size());
-
-            for (int j = 0; j < uniqueList.size()-1; j++) {
-                TFIDF.add(j, occVec.get(j) * idfVector.get(j));
-            }
-
-            System.out.println(TFIDF);
-        }
-
-
+        return occVec;
     }
 
     public static void main(String[] args) throws IOException {
