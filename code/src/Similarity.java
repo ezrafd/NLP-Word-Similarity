@@ -1,17 +1,18 @@
 import java.io.*;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 
 public class Similarity {
-    protected HashMap<String, HashMap<String, Double>> termFrequencies; // hashmap of target words and the count of words that occur with them
+    protected HashMap<String, HashMap<String, Double>> termFrequencies; // hashmap of target words and words in the sentence with them
+    // and the count of words that occur with them
     protected HashMap<String, ArrayList<String>> targetInfo; // hashmap of target words corresponding to an arraylist with
     // the weighting in index 0 and the similarity measure in index 1
     protected HashMap<String, Double> sentenceFrequencies;
     protected HashSet<String> stopList; // hashset containing words in the stopList
     protected HashSet<String> uniqueSet; // hashset containing all unique words in sentences file
-    protected HashMap<String, ArrayList<Double>> occVecMap; // hashmap storing all the occurrence vectors
     protected ArrayList<String> uniqueList;
     protected ArrayList<Double> idfVector;
     protected Double numSentences; // number of sentences in the sentences file
@@ -36,7 +37,6 @@ public class Similarity {
         termFrequencies = new HashMap<>();
         sentenceFrequencies = new HashMap<>();
         targetInfo = new HashMap<>();
-        occVecMap = new HashMap<>();
         stopList = new HashSet<>();
         uniqueSet = new HashSet<>();
         uniqueList = new ArrayList<>();
@@ -59,9 +59,7 @@ public class Similarity {
         st = br.readLine();
 
         while (st != null){
-            String stLower = st.toLowerCase();
-
-            String[] words = stLower.split("\\s+");
+            String[] words = st.split("\\s+");
             if (!termFrequencies.containsKey(words[0])) {
                 termFrequencies.put(words[0], new HashMap<>());
             }
@@ -102,24 +100,16 @@ public class Similarity {
 
                 if (termFrequencies.containsKey(word)) {
                     for (String w : words) {
-                        if (!isAlpha(w)) {
-                            continue;
-                        }
-
-                        if (stopList != null && stopList.contains(w)) {
-                            continue;
-                        }
+                        if (!isAlpha(w)) { continue; }
+                        if (stopList != null && stopList.contains(w)) { continue; }
+                        if (w.equals(word)) { continue; }
 
                         if (!termFrequencies.containsKey(w)) {
                             termFrequencies.put(w, new HashMap<>());
                             for (String w2 : words) {
-                                if (!isAlpha(w2)) {
-                                    continue;
-                                }
-
-                                if (stopList != null && stopList.contains(w2)) {
-                                    continue;
-                                }
+                                if (!isAlpha(w)) { continue; }
+                                if (stopList != null && stopList.contains(w)) { continue; }
+                                if (w2.equals(w)) { continue; }
 
                                 if (!termFrequencies.get(w).containsKey(w2)) {
                                     termFrequencies.get(w).put(w2, 1.0);
@@ -163,16 +153,6 @@ public class Similarity {
             idfVector.add(i, logCalc);
         }
 
-//        if (weighting.equals("IDF")) {
-//            ArrayList<Double> TFIDF = new ArrayList<>(uniqueList.size());
-//
-//            for (int j = 0; j < uniqueList.size(); j++) {
-//                TFIDF.add(j, occVec.get(j) * idfVector.get(j));
-//            }
-//
-//            System.out.println(TFIDF);
-//        }
-
         //System.out.println(idfVector);
         //System.out.println(termFrequencies);
         //System.out.println(sentenceFrequencies);
@@ -182,24 +162,18 @@ public class Similarity {
         System.out.println(numSentences);
 
         runStats();
-
     }
 
     public void runStats() {
-
-        // normalizes all vectors
-        for (String word : uniqueList) {
-            occVecMap.put(word, getOccVec(word));
-        }
-
         for (String targetWord : targetInfo.keySet()) {
             ArrayList<String> infoList = targetInfo.get(targetWord);
             String weighting = infoList.get(0);
             String simMeasure = infoList.get(1);
-            
+
+            System.out.println("\nSIM: " + targetWord + " " + targetInfo.get(targetWord).get(0)
+                    + " " + targetInfo.get(targetWord).get(1));
             runSims(targetWord, weighting, simMeasure);
         }
-
     }
 
     public ArrayList<Double> getOccVec(String word) {
@@ -227,38 +201,55 @@ public class Similarity {
         wordsList.addAll(termFrequencies.get(targetWord).keySet());
 
         ArrayList<Double> distanceList = new ArrayList<>(wordsList.size());
-        ArrayList<Double> vec1 = occVecMap.get(targetWord);
-        ArrayList<Double> normVec1 = normVec(vec1);
+        ArrayList<Double> vec1 = getOccVec(targetWord);
+        ArrayList<Double> normVec1;
         ArrayList<Double> vec2 = new ArrayList<>();
         ArrayList<Double> normVec2 = new ArrayList<>();
 
-        if (simMeasure.equals("l1")) {
+        if (weighting.equals("IDF")) {
+            for (int j = 0; j < uniqueList.size(); j++) {
+                double current = vec1.get(j);
+                vec1.set(j, current * idfVector.get(j));
+            }
+        }
+
+        normVec1 = normVec(vec1);
+
+        if (simMeasure.equals("L1")) {
             for (String word : wordsList){
-                vec2 = occVecMap.get(word);
+                vec2 = getOccVec(word);
                 normVec2 = normVec(vec2);
                 distanceList.add(wordsList.indexOf(word), getL1Distance(normVec1, normVec2));
             }
         }
 
-        if (simMeasure.equals("euclidean")) {
+        if (simMeasure.equals("EUCLIDEAN")) {
             for (String word : wordsList){
-                vec2 = occVecMap.get(word);
+                vec2 = getOccVec(word);
                 normVec2 = normVec(vec2);
                 distanceList.add(wordsList.indexOf(word), getEuclideanDistance(normVec1, normVec2));
             }
         }
 
-        if (simMeasure.equals("cosine")) {
+        if (simMeasure.equals("COSINE")) {
             for (String word : wordsList){
-                vec2 = occVecMap.get(word);
+                vec2 = getOccVec(word);
                 normVec2 = normVec(vec2);
                 distanceList.add(wordsList.indexOf(word), getCosineDistance(normVec1, normVec2));
             }
         }
 
         modQuickSort(distanceList, 0, distanceList.size() - 1, wordsList);
-        for (int i = distanceList.size() - 1; i > distanceList.size() - 11; i--){
-            System.out.println(wordsList.get(i) + ": " + distanceList.get(i));
+        if (distanceList.size() < 10) {
+            Collections.reverse(distanceList);
+            Collections.reverse(wordsList);
+            for (double dist : distanceList){
+                System.out.println(wordsList.get(distanceList.indexOf(dist)) + "\t" + dist);
+            }
+        } else {
+            for (int i = distanceList.size() - 1; i > distanceList.size() - 11; i--){
+                System.out.println(wordsList.get(i) + "\t" + distanceList.get(i));
+            }
         }
     }
 
@@ -372,12 +363,12 @@ public class Similarity {
 
     public static void main(String[] args) throws IOException {
         String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
-        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences2";
-        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/test";
+        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/5asentences";
+        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/5atest";
 
-        String stopListFile = "/Users/talmordoch/Desktop/NLP/assignment 5/data/stoplist";
-        String sentences = "/Users/talmordoch/Desktop/NLP/assignment 5/data/sentences";
-        String inputFile = "/Users/talmordoch/Desktop/NLP/assignment 5/data/test";
+//        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
+//        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
+//        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
 
         Similarity simRun = new Similarity(stopListFile, sentences, inputFile);
     }
