@@ -6,10 +6,12 @@ import java.util.HashSet;
 
 public class Similarity {
     protected HashMap<String, HashMap<String, Double>> termFrequencies; // hashmap of target words and the count of words that occur with them
+    protected HashMap<String, ArrayList<String>> targetInfo; // hashmap of target words corresponding to an arraylist with
+    // the weighting in index 0 and the similarity measure in index 1
     protected HashMap<String, Double> sentenceFrequencies;
     protected HashSet<String> stopList; // hashset containing words in the stopList
     protected HashSet<String> uniqueSet; // hashset containing all unique words in sentences file
-    protected HashMap<String, ArrayList<Double>> occVecMap; // hashmap storing all the occurrence
+    protected HashMap<String, ArrayList<Double>> occVecMap; // hashmap storing all the occurrence vectors
     protected ArrayList<String> uniqueList;
     protected ArrayList<Double> idfVector;
     protected Double numSentences; // number of sentences in the sentences file
@@ -33,6 +35,8 @@ public class Similarity {
     public Similarity (String stopListFile, String sentences, String inputFile) throws IOException {
         termFrequencies = new HashMap<>();
         sentenceFrequencies = new HashMap<>();
+        targetInfo = new HashMap<>();
+        occVecMap = new HashMap<>();
         stopList = new HashSet<>();
         uniqueSet = new HashSet<>();
         uniqueList = new ArrayList<>();
@@ -60,6 +64,13 @@ public class Similarity {
             String[] words = stLower.split("\\s+");
             if (!termFrequencies.containsKey(words[0])) {
                 termFrequencies.put(words[0], new HashMap<>());
+            }
+
+            if (!targetInfo.containsKey(words[0])) {
+                ArrayList<String> infoList = new ArrayList<>();
+                infoList.add(words[1]);
+                infoList.add(words[2]);
+                targetInfo.put(words[0], infoList);
             }
 
             st = br.readLine();
@@ -97,6 +108,25 @@ public class Similarity {
 
                         if (stopList != null && stopList.contains(w)) {
                             continue;
+                        }
+
+                        if (!termFrequencies.containsKey(w)) {
+                            termFrequencies.put(w, new HashMap<>());
+                            for (String w2 : words) {
+                                if (!isAlpha(w2)) {
+                                    continue;
+                                }
+
+                                if (stopList != null && stopList.contains(w2)) {
+                                    continue;
+                                }
+
+                                if (!termFrequencies.get(w).containsKey(w2)) {
+                                    termFrequencies.get(w).put(w2, 1.0);
+                                } else {
+                                    termFrequencies.get(w).put(w2, termFrequencies.get(w).get(w2) + 1);
+                                }
+                            }
                         }
 
                         if (!termFrequencies.get(word).containsKey(w)) {
@@ -143,7 +173,7 @@ public class Similarity {
 //            System.out.println(TFIDF);
 //        }
 
-        System.out.println(idfVector);
+        //System.out.println(idfVector);
         //System.out.println(termFrequencies);
         //System.out.println(sentenceFrequencies);
 
@@ -151,24 +181,85 @@ public class Similarity {
         System.out.println(wordCount);
         System.out.println(numSentences);
 
+        runStats();
+
     }
 
-    public void runStats(String weighting, String simMeasure) {
+    public void runStats() {
+
+        // normalizes all vectors
         for (String word : uniqueList) {
             occVecMap.put(word, getOccVec(word));
         }
 
-        if (simMeasure.equals("L1")) {
-            //get L1 and normalize by dividing resulting vector by L2 length
+        for (String targetWord : targetInfo.keySet()) {
+            ArrayList<String> infoList = targetInfo.get(targetWord);
+            String weighting = infoList.get(0);
+            String simMeasure = infoList.get(1);
+            
+            runSims(targetWord, weighting, simMeasure);
         }
+
     }
 
-    public double getL2Length(ArrayList<Double> vec) {
-        double sumOfSquares = 0.0;
-        for (Double d : vec) {
-            sumOfSquares += d * d;
+    public ArrayList<Double> getOccVec(String word) {
+        ArrayList<Double> occVec = new ArrayList<>(uniqueList.size());
+
+        // initialize variable to store the term frequency
+        double wCount;
+
+        for (int i = 0; i < uniqueList.size(); i++) {
+            if (termFrequencies.containsKey(word) && termFrequencies.get(word).get(uniqueList.get(i)) != null) {
+                wCount = termFrequencies.get(word).get(uniqueList.get(i));
+            } else {
+                wCount = 0;
+            }
+
+            occVec.add(i, wCount);
         }
-        return Math.sqrt(sumOfSquares);
+        //uniqueList.indexOf(word);
+
+        return occVec;
+    }
+
+    public void runSims(String targetWord, String weighting, String simMeasure) {
+        ArrayList<String> wordsList = new ArrayList<>(termFrequencies.get(targetWord).keySet().size());
+        wordsList.addAll(termFrequencies.get(targetWord).keySet());
+
+        ArrayList<Double> distanceList = new ArrayList<>(wordsList.size());
+        ArrayList<Double> vec1 = occVecMap.get(targetWord);
+        ArrayList<Double> normVec1 = normVec(vec1);
+        ArrayList<Double> vec2 = new ArrayList<>();
+        ArrayList<Double> normVec2 = new ArrayList<>();
+
+        if (simMeasure.equals("l1")) {
+            for (String word : wordsList){
+                vec2 = occVecMap.get(word);
+                normVec2 = normVec(vec2);
+                distanceList.add(wordsList.indexOf(word), getL1Distance(normVec1, normVec2));
+            }
+        }
+
+        if (simMeasure.equals("euclidean")) {
+            for (String word : wordsList){
+                vec2 = occVecMap.get(word);
+                normVec2 = normVec(vec2);
+                distanceList.add(wordsList.indexOf(word), getEuclideanDistance(normVec1, normVec2));
+            }
+        }
+
+        if (simMeasure.equals("cosine")) {
+            for (String word : wordsList){
+                vec2 = occVecMap.get(word);
+                normVec2 = normVec(vec2);
+                distanceList.add(wordsList.indexOf(word), getCosineDistance(normVec1, normVec2));
+            }
+        }
+
+        modQuickSort(distanceList, 0, distanceList.size() - 1, wordsList);
+        for (int i = distanceList.size() - 1; i > distanceList.size() - 11; i--){
+            System.out.println(wordsList.get(i) + ": " + distanceList.get(i));
+        }
     }
 
     public double getL1Distance(ArrayList<Double> vector1, ArrayList<Double> vector2) {
@@ -178,6 +269,8 @@ public class Similarity {
 
         double sum = 0;
         for (int i = 0; i < vector1.size(); i++) {
+//            System.out.println(vector1.get(i));
+//            System.out.println(vector2.get(i));
             double diff = vector1.get(i) - vector2.get(i);
             sum += Math.abs(diff);
         }
@@ -217,28 +310,75 @@ public class Similarity {
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
 
+    public double getL2Length(ArrayList<Double> vec) {
+        double sumOfSquares = 0.0;
+        for (Double d : vec) {
+            sumOfSquares += d * d;
+        }
+        return Math.sqrt(sumOfSquares);
+    }
+
+    public ArrayList<Double> normVec (ArrayList<Double> vec){
+        double l2Length = getL2Length(vec);
+
+        if (l2Length == 0) {
+            return vec;
+        }
+
+        ArrayList<Double> normVec = new ArrayList<Double>(vec.size());
+        for (int i = 0; i < vec.size(); i++){
+            normVec.add(i, vec.get(i)/l2Length);
+        }
+        return normVec;
+    }
+
+    public static void modQuickSort(ArrayList<Double> arr, int low, int high, ArrayList<String> wordArr) {
+        if (low < high) {
+            int pivotIndex = partition(arr, low, high, wordArr);
+            modQuickSort(arr, low, pivotIndex - 1, wordArr);
+            modQuickSort(arr, pivotIndex + 1, high, wordArr);
+        }
+    }
+
+    public static int partition(ArrayList<Double> arr, int low, int high, ArrayList<String> wordArr) {
+        double pivot = arr.get(high);
+        int i = low - 1;
+        for (int j = low; j < high; j++) {
+            if (arr.get(j) <= pivot) {
+                i++;
+                double temp = arr.get(i);
+                arr.set(i, arr.get(j));
+                arr.set(j, temp);
+
+                String temp2 = wordArr.get(i);
+                wordArr.set(i, wordArr.get(j));
+                wordArr.set(j, temp2);
+            }
+        }
+        double temp = arr.get(i + 1);
+        arr.set(i + 1, arr.get(high));
+        arr.set(high, temp);
+
+        String temp2 = wordArr.get(i + 1);
+        wordArr.set(i + 1, wordArr.get(high));
+        wordArr.set(high, temp2);
+
+        return i + 1;
+    }
+
     public boolean isAlpha(String word) {
         return word.matches("[a-zA-Z]+");
     }
 
-    public ArrayList<Double> getOccVec(String word) {
-        ArrayList<Double> occVec = new ArrayList<>(uniqueList.size());
-
-        for (String w : termFrequencies.get(word).keySet()) {
-            int index = uniqueList.indexOf(w);
-            Double wCount = termFrequencies.get(word).get(w);
-
-            occVec.add(index, wCount);
-        }
-        //uniqueList.indexOf(word);
-
-        return occVec;
-    }
-
     public static void main(String[] args) throws IOException {
         String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
-        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
+        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences2";
         String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/test";
+
+        String stopListFile = "/Users/talmordoch/Desktop/NLP/assignment 5/data/stoplist";
+        String sentences = "/Users/talmordoch/Desktop/NLP/assignment 5/data/sentences";
+        String inputFile = "/Users/talmordoch/Desktop/NLP/assignment 5/data/test";
+
         Similarity simRun = new Similarity(stopListFile, sentences, inputFile);
     }
 }
