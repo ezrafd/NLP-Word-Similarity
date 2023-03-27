@@ -60,9 +60,6 @@ public class Similarity {
 
         while (st != null){
             String[] words = st.split("\\s+");
-            if (!termFrequencies.containsKey(words[0])) {
-                termFrequencies.put(words[0], new HashMap<>());
-            }
 
             if (!targetInfo.containsKey(words[0])) {
                 ArrayList<String> infoList = new ArrayList<>();
@@ -84,57 +81,41 @@ public class Similarity {
             String stLower = st.toLowerCase();
 
             String[] words = stLower.split("\\s+");
-            for (String word : words) {
-                if (!isAlpha(word)) {
-                    continue;
+            for (int j = 0; j < words.length; j++) {
+                if (!isAlpha(words[j])) { continue; }
+
+                if (stopList.contains(words[j])) { continue; }
+
+
+                if (!sentenceFrequencies.containsKey(words[j])) {
+                    sentenceFrequencies.put(words[j], 0.0);
+                }
+                currentWords.add(words[j]);
+
+                if (!termFrequencies.containsKey(words[j])) {
+                    termFrequencies.put(words[j], new HashMap<>());
                 }
 
-                if (stopList.contains(word)) {
-                    continue;
-                }
+                for (int k = 0; k < words.length; k++) {
+                    if (!isAlpha(words[k])) { continue; }
+                    if (stopList != null && stopList.contains(words[k])) { continue; }
 
-                if (!sentenceFrequencies.containsKey(word)) {
-                    sentenceFrequencies.put(word, 0.0);
-                }
-                currentWords.add(word);
+                    //don't count itself as a word it occurs with
+                    if (j == k) { continue; }
 
-                if (termFrequencies.containsKey(word)) {
-                    for (String w : words) {
-                        if (!isAlpha(w)) { continue; }
-                        if (stopList != null && stopList.contains(w)) { continue; }
-                        if (w.equals(word)) { continue; }
-
-                        if (!termFrequencies.containsKey(w)) {
-                            termFrequencies.put(w, new HashMap<>());
-                            for (String w2 : words) {
-                                if (!isAlpha(w)) { continue; }
-                                if (stopList != null && stopList.contains(w)) { continue; }
-                                if (w2.equals(w)) { continue; }
-
-                                if (!termFrequencies.get(w).containsKey(w2)) {
-                                    termFrequencies.get(w).put(w2, 1.0);
-                                } else {
-                                    termFrequencies.get(w).put(w2, termFrequencies.get(w).get(w2) + 1);
-                                }
-                            }
-                        }
-
-                        if (!termFrequencies.get(word).containsKey(w)) {
-                            termFrequencies.get(word).put(w, 1.0);
-                        } else {
-                            termFrequencies.get(word).put(w, termFrequencies.get(word).get(w) + 1);
-                        }
-
-
+                    if (!termFrequencies.get(words[j]).containsKey(words[k])) {
+                        termFrequencies.get(words[j]).put(words[k], 1.0);
+                    } else {
+                        termFrequencies.get(words[j]).put(words[k], termFrequencies.get(words[j]).get(words[k]) + 1);
                     }
                 }
 
                 wordCount++;
 
-                if (!uniqueSet.contains(word)) {
+                if (!uniqueSet.contains(words[j])) {
                     // adds word if not already in set
-                    uniqueSet.add(word);
-                    uniqueList.add(word);
+                    uniqueSet.add(words[j]);
+                    uniqueList.add(words[j]);
                 }
             }
 
@@ -154,7 +135,7 @@ public class Similarity {
         }
 
         //System.out.println(idfVector);
-        //System.out.println(termFrequencies);
+        System.out.println(termFrequencies);
         //System.out.println(sentenceFrequencies);
 
         System.out.println(uniqueSet.size());
@@ -183,7 +164,7 @@ public class Similarity {
         double wCount;
 
         for (int i = 0; i < uniqueList.size(); i++) {
-            if (termFrequencies.containsKey(word) && termFrequencies.get(word).get(uniqueList.get(i)) != null) {
+            if (termFrequencies.get(word).get(uniqueList.get(i)) != null) {
                 wCount = termFrequencies.get(word).get(uniqueList.get(i));
             } else {
                 wCount = 0;
@@ -191,18 +172,19 @@ public class Similarity {
 
             occVec.add(i, wCount);
         }
-        //uniqueList.indexOf(word);
 
         return occVec;
     }
 
     public void runSims(String targetWord, String weighting, String simMeasure) {
-        ArrayList<String> wordsList = new ArrayList<>(termFrequencies.get(targetWord).keySet().size());
-        wordsList.addAll(termFrequencies.get(targetWord).keySet());
+        ArrayList<String> wordsList = new ArrayList<>(uniqueList.size());
+        wordsList.addAll(uniqueList);
 
         ArrayList<Double> distanceList = new ArrayList<>(wordsList.size());
         ArrayList<Double> vec1 = getOccVec(targetWord);
         ArrayList<Double> normVec1;
+        System.out.println(uniqueList);
+        System.out.println(vec1);
         ArrayList<Double> vec2 = new ArrayList<>();
         ArrayList<Double> normVec2 = new ArrayList<>();
 
@@ -240,11 +222,12 @@ public class Similarity {
         }
 
         modQuickSort(distanceList, 0, distanceList.size() - 1, wordsList);
+
         if (distanceList.size() < 10) {
             Collections.reverse(distanceList);
             Collections.reverse(wordsList);
-            for (double dist : distanceList){
-                System.out.println(wordsList.get(distanceList.indexOf(dist)) + "\t" + dist);
+            for (int k = 0; k < distanceList.size(); k++){
+                System.out.println(wordsList.get(k) + "\t" + distanceList.get(k));
             }
         } else {
             for (int i = distanceList.size() - 1; i > distanceList.size() - 11; i--){
