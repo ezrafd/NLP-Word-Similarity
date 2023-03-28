@@ -85,57 +85,78 @@ public class Similarity {
             String stLower = st.toLowerCase();
 
             String[] words = stLower.split("\\s+");
+            ArrayList<String> rawWords = new ArrayList<String>();
+
+            // Preprocess sentence
+            for (String word : words) {
+                // Skip stop words
+                if (stopList.contains(word)) {
+                    continue;
+                }
+
+                // Add all words that are exclusively letters
+                if (isAlpha(word)) {
+                    rawWords.add(word);
+                }
+            }
 
             // Iterate over each word in the sentence and process it
-            for (int j = 0; j < words.length; j++) {
-                // Skip non-alphabetic words
-                if (!isAlpha(words[j])) { continue; }
-
-                // Skip stop words
-                if (stopList.contains(words[j])) { continue; }
+            for (int j = 0; j < rawWords.size(); j++) {
+                String jWord = rawWords.get(j);
 
                 // Add word to sentenceFrequencies if it hasn't been seen before
-                if (!sentenceFrequencies.containsKey(words[j])) {
-                    sentenceFrequencies.put(words[j], 0.0);
+                if (!sentenceFrequencies.containsKey(jWord)) {
+                    sentenceFrequencies.put(jWord, 0.0);
                 }
 
                 // Add word to currentWords if it hasn't been seen in this sentence before
-                if (!currentWords.contains(words[j])) {
-                    currentWords.add(words[j]);
+                if (!currentWords.contains(jWord)) {
+                    currentWords.add(jWord);
+                }
+
+                // Add word to uniqueSet and uniqueList if it hasn't been seen
+                if (!uniqueSet.contains(jWord)) {
+                    // adds word if not already in set
+                    uniqueSet.add(jWord);
+                    uniqueList.add(jWord);
                 }
 
                 // Add word to termFrequencies if it hasn't been seen before
-                if (!termFrequencies.containsKey(words[j])) {
-                    termFrequencies.put(words[j], new HashMap<>());
+                if (!termFrequencies.containsKey(jWord)) {
+                    termFrequencies.put(jWord, new HashMap<>());
+                }
+
+                int startContext;
+                if (j <= 2) {
+                    startContext = 0;
+                } else {
+                    startContext = j - 2;
+                }
+
+                int endContext;
+                if (j > (rawWords.size() - 3)) {
+                    endContext = rawWords.size() - 1;
+                } else {
+                    endContext = j + 2;
                 }
 
                 // Iterate over each other word in the sentence and process it
-                for (int k = 0; k < words.length; k++) {
-                    // Skip non-alphabetic words
-                    if (!isAlpha(words[k])) { continue; }
-                    // Skip stop words
-                    if (stopList != null && stopList.contains(words[k])) { continue; }
+                for (int k = startContext; k <= endContext; k++) {
+                    String kWord = rawWords.get(k);
 
                     // Don't count a word as co-occurring with itself
                     if (j == k) { continue; }
 
                     // Add word to termFrequencies and increment its count
-                    if (!termFrequencies.get(words[j]).containsKey(words[k])) {
-                        termFrequencies.get(words[j]).put(words[k], 1.0);
+                    if (!termFrequencies.get(jWord).containsKey(kWord)) {
+                        termFrequencies.get(jWord).put(kWord, 1.0);
                     } else {
-                        termFrequencies.get(words[j]).put(words[k], termFrequencies.get(words[j]).get(words[k]) + 1);
+                        termFrequencies.get(jWord).put(kWord, termFrequencies.get(jWord).get(kWord) + 1);
                     }
                 }
 
-                // Increment word count and add word to uniqueSet and uniqueList if it hasn't been seen
-
+                // Increment word count
                 wordCount++;
-
-                if (!uniqueSet.contains(words[j])) {
-                    // adds word if not already in set
-                    uniqueSet.add(words[j]);
-                    uniqueList.add(words[j]);
-                }
             }
 
             numSentences++;
@@ -538,13 +559,13 @@ public class Similarity {
     }
 
     public static void main(String[] args) throws IOException {
-//        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
-//        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
-//        String inputFile = "/Users/ezraford/Desktop/School/CS 1l59/NLP-Word-Similarity/data/test";
+        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
+        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
+        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/test";
 
-        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
-        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
-        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
+//        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
+//        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
+//        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
 
         Similarity simRun = new Similarity(stopListFile, sentences, inputFile);
     }
