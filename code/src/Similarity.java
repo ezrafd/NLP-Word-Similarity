@@ -90,7 +90,10 @@ public class Similarity {
                 if (!sentenceFrequencies.containsKey(words[j])) {
                     sentenceFrequencies.put(words[j], 0.0);
                 }
-                currentWords.add(words[j]);
+
+                if (!currentWords.contains(words[j])) {
+                    currentWords.add(words[j]);
+                }
 
                 if (!termFrequencies.containsKey(words[j])) {
                     termFrequencies.put(words[j], new HashMap<>());
@@ -135,7 +138,7 @@ public class Similarity {
         }
 
         //System.out.println(idfVector);
-        System.out.println(termFrequencies);
+        //System.out.println(termFrequencies);
         //System.out.println(sentenceFrequencies);
 
         System.out.println(uniqueSet.size());
@@ -146,82 +149,128 @@ public class Similarity {
     }
 
     public void runStats() {
+        // Loop through each target word in the targetInfo map
         for (String targetWord : targetInfo.keySet()) {
+            // Get the information list for the current target word
             ArrayList<String> infoList = targetInfo.get(targetWord);
+            // Extract the weighting and similarity measure strings from the information list
             String weighting = infoList.get(0);
             String simMeasure = infoList.get(1);
 
+            // Print out the current target word, its weighting, and similarity measure
             System.out.println("\nSIM: " + targetWord + " " + targetInfo.get(targetWord).get(0)
                     + " " + targetInfo.get(targetWord).get(1));
+
+            // Call the runSims method with the current target word, weighting, and similarity measure
             runSims(targetWord, weighting, simMeasure);
         }
     }
 
     public ArrayList<Double> getOccVec(String word) {
+        // Create a new ArrayList of Double objects to store the term frequencies
+        // for a given word
         ArrayList<Double> occVec = new ArrayList<>(uniqueList.size());
 
-        // initialize variable to store the term frequency
+        // Declare a variable to store the term frequency for each unique word in the
+        // corpus
         double wCount;
 
+        // Iterate over each unique word in the corpus
         for (int i = 0; i < uniqueList.size(); i++) {
+            // If the term frequency map for the given word contains a count for the
+            // current unique word, retrieve it and store it in wCount
             if (termFrequencies.get(word).get(uniqueList.get(i)) != null) {
                 wCount = termFrequencies.get(word).get(uniqueList.get(i));
             } else {
+                // Otherwise, set wCount to 0
                 wCount = 0;
             }
 
+            // Add the term frequency for the current unique word to the occVec list
             occVec.add(i, wCount);
         }
 
+        // Return the list of term frequencies for the given word
         return occVec;
+    }
+
+    public void convertToIDF(ArrayList<Double> vec) {
+        // iterate through the uniqueList of words
+        for (int j = 0; j < uniqueList.size(); j++) {
+            // retrieve the current value in the vector
+            double current = vec.get(j);
+            // multiply the current value by the IDF value for the corresponding word
+            vec.set(j, current * idfVector.get(j));
+        }
     }
 
     public void runSims(String targetWord, String weighting, String simMeasure) {
         ArrayList<String> wordsList = new ArrayList<>(uniqueList.size());
         wordsList.addAll(uniqueList);
 
-        ArrayList<Double> distanceList = new ArrayList<>(wordsList.size());
+        ArrayList<Double> distanceList = new ArrayList<>(Collections.nCopies(wordsList.size(), 0.0));
+
         ArrayList<Double> vec1 = getOccVec(targetWord);
-        ArrayList<Double> normVec1;
-        System.out.println(uniqueList);
-        System.out.println(vec1);
         ArrayList<Double> vec2 = new ArrayList<>();
-        ArrayList<Double> normVec2 = new ArrayList<>();
+
 
         if (weighting.equals("IDF")) {
-            for (int j = 0; j < uniqueList.size(); j++) {
-                double current = vec1.get(j);
-                vec1.set(j, current * idfVector.get(j));
-            }
+            convertToIDF(vec1);
         }
 
-        normVec1 = normVec(vec1);
+        // normalize the occurrence vector of the target word
+        normVec(vec1);
 
         if (simMeasure.equals("L1")) {
             for (String word : wordsList){
-                vec2 = getOccVec(word);
-                normVec2 = normVec(vec2);
-                distanceList.add(wordsList.indexOf(word), getL1Distance(normVec1, normVec2));
+                if(!word.equals(targetWord)) {
+                    vec2 = getOccVec(word);
+                    if (weighting.equals("IDF")) {
+                        convertToIDF(vec2);
+                    }
+
+                    // normalize the occurrence vector of the target word
+                    normVec(vec2);
+
+                    distanceList.set(wordsList.indexOf(word), getL1Distance(vec1, vec2));
+                }
             }
         }
 
         if (simMeasure.equals("EUCLIDEAN")) {
             for (String word : wordsList){
-                vec2 = getOccVec(word);
-                normVec2 = normVec(vec2);
-                distanceList.add(wordsList.indexOf(word), getEuclideanDistance(normVec1, normVec2));
+                if(!word.equals(targetWord)) {
+                    vec2 = getOccVec(word);
+                    if (weighting.equals("IDF")) {
+                        convertToIDF(vec2);
+                    }
+                    normVec(vec2);
+
+                    distanceList.set(wordsList.indexOf(word), getEuclideanDistance(vec1, vec2));
+                }
             }
         }
 
         if (simMeasure.equals("COSINE")) {
             for (String word : wordsList){
-                vec2 = getOccVec(word);
-                normVec2 = normVec(vec2);
-                distanceList.add(wordsList.indexOf(word), getCosineDistance(normVec1, normVec2));
+                if(!word.equals(targetWord)) {
+                    vec2 = getOccVec(word);
+                    if (weighting.equals("IDF")) {
+                        convertToIDF(vec2);
+                    }
+                    normVec(vec2);
+
+                    distanceList.set(wordsList.indexOf(word), getCosineDistance(vec1, vec2));
+                }
             }
         }
 
         modQuickSort(distanceList, 0, distanceList.size() - 1, wordsList);
+
+        if (simMeasure.equals("L1") || simMeasure.equals("EUCLIDEAN")) {
+            Collections.reverse(distanceList);
+            Collections.reverse(wordsList);
+        }
 
         if (distanceList.size() < 10) {
             Collections.reverse(distanceList);
@@ -279,7 +328,7 @@ public class Similarity {
             norm2 += vector2.get(i) * vector2.get(i);
         }
         if (norm1 == 0.0 || norm2 == 0.0) {
-            throw new IllegalArgumentException("One or both vectors are zero vectors.");
+            return 0;
         }
         return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
     }
@@ -292,18 +341,16 @@ public class Similarity {
         return Math.sqrt(sumOfSquares);
     }
 
-    public ArrayList<Double> normVec (ArrayList<Double> vec){
+    public void normVec (ArrayList<Double> vec){
         double l2Length = getL2Length(vec);
 
-        if (l2Length == 0) {
-            return vec;
+        if (l2Length != 0) {
+            for (int i = 0; i < vec.size(); i++){
+                vec.set(i, vec.get(i)/l2Length);
+            }
         }
 
-        ArrayList<Double> normVec = new ArrayList<Double>(vec.size());
-        for (int i = 0; i < vec.size(); i++){
-            normVec.add(i, vec.get(i)/l2Length);
-        }
-        return normVec;
+        //ArrayList<Double> normVec = new ArrayList<Double>(vec.size());
     }
 
     public static void modQuickSort(ArrayList<Double> arr, int low, int high, ArrayList<String> wordArr) {
@@ -345,13 +392,13 @@ public class Similarity {
     }
 
     public static void main(String[] args) throws IOException {
-        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
-        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/5asentences";
-        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/5atest";
+//        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
+//        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
+//        String inputFile = "/Users/ezraford/Desktop/School/CS 1l59/NLP-Word-Similarity/data/test";
 
-//        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
-//        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
-//        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
+        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
+        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
+        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
 
         Similarity simRun = new Similarity(stopListFile, sentences, inputFile);
     }
