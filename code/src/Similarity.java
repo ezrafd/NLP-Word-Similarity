@@ -104,6 +104,7 @@ public class Similarity {
             for (int j = 0; j < rawWords.size(); j++) {
                 String jWord = rawWords.get(j);
 
+
                 // Add word to sentenceFrequencies if it hasn't been seen before
                 if (!sentenceFrequencies.containsKey(jWord)) {
                     sentenceFrequencies.put(jWord, 0.0);
@@ -140,7 +141,7 @@ public class Similarity {
                     endContext = j + 2;
                 }
 
-                // Iterate over each other word in the sentence and process it
+                // Iterate over each word within the two word context
                 for (int k = startContext; k <= endContext; k++) {
                     String kWord = rawWords.get(k);
 
@@ -204,7 +205,7 @@ public class Similarity {
 
             // Print out the current target word, its weighting, and similarity measure
             System.out.println("\nSIM: " + targetWord + " " + targetInfo.get(targetWord).get(0)
-                    + " " + targetInfo.get(targetWord).get(1));
+                    + "\t" + targetInfo.get(targetWord).get(1));
 
             // Call the runSims method with the current target word, weighting, and similarity measure
             runSims(targetWord, weighting, simMeasure);
@@ -277,6 +278,7 @@ public class Similarity {
         // create a list of words to compare against
         ArrayList<String> wordsList = new ArrayList<>(uniqueList.size());
         wordsList.addAll(uniqueList);
+        wordsList.remove(targetWord);
 
         // create a list of distances, initialized to 0
         ArrayList<Double> distanceList = new ArrayList<>(Collections.nCopies(wordsList.size(), 0.0));
@@ -559,13 +561,13 @@ public class Similarity {
     }
 
     public static void main(String[] args) throws IOException {
-        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
-        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
-        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/test";
+//        String stopListFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/stoplist";
+//        String sentences = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/sentences";
+//        String inputFile = "/Users/ezraford/Desktop/School/CS 159/NLP-Word-Similarity/data/test";
 
-//        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
-//        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
-//        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
+        String stopListFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/stoplist";
+        String sentences = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/sentences";
+        String inputFile = "/Users/talmordoch/Library/Mobile Documents/com~apple~CloudDocs/NLP-Word-Similarity/data/test";
 
         Similarity simRun = new Similarity(stopListFile, sentences, inputFile);
     }
